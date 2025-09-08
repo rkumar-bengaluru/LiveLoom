@@ -5,11 +5,13 @@ from PyQt6.QtWidgets import (
     QFrame
 )
 from PyQt6.QtCore import Qt
+from src.ui.widgets.llm_selector import LLMSelector
 from src.workers.llm_worker import LLMWorkerThread
 
 class ChatTab(QWidget):
-    def __init__(self):
+    def __init__(self, settings):
         super().__init__()
+        self.settings = settings 
         self.init_ui()
 
     def init_ui(self):
@@ -69,21 +71,7 @@ class ChatTab(QWidget):
         input_layout.setContentsMargins(0, 10, 0, 0)
         input_layout.setSpacing(10)
 
-        # Model Picker
-        self.model_picker = QComboBox()
-        self.model_picker.addItems([
-            "Qwen",
-            "Grok",
-            "Gemini Pro",
-            "Llama 3 70B",
-            "Mistral 7B",
-            "Claude 3",
-            "GPT-4 Turbo"
-        ])
-        self.model_picker.setFixedWidth(150)
-        self.model_picker.currentTextChanged.connect(self.on_model_select)
-        self.model_picker.setStyleSheet("padding: 5px; border: 1px solid #ddd; border-radius: 4px;")
-        input_layout.addWidget(self.model_picker)
+        
 
         # Text Input
         self.input_box = QLineEdit()
@@ -101,6 +89,10 @@ class ChatTab(QWidget):
 
         chat_layout.addWidget(input_container)
 
+        # Model Picker
+        self.llm_selector = LLMSelector(self.settings)
+        input_layout.addWidget(self.llm_selector)
+
         # Add Sidebar and Chat Area to Main Layout
         main_layout.addWidget(sidebar)
         main_layout.addWidget(chat_area, 1)  # Take remaining space
@@ -115,11 +107,7 @@ class ChatTab(QWidget):
     # --- Dummy Functions (Replace Later) ---
 
     def update_display(self, text):
-        self.chat_display.append(f"<b>{self.model_picker.currentText()}</b>: {text}")
-
-    def on_model_select(self):
-        print(f"[UI Action] New Model Selected {self.model_picker.currentText()}")
-        # Clear chat_display, reset state, etc.
+        self.chat_display.append(f"<b>{self.llm_selector.model_name}</b>: {text}")
 
     def on_new_chat(self):
         print("[UI Action] New Chat clicked")

@@ -92,6 +92,25 @@ class SettingsTab(QWidget):
         """Enable Delete button only if a row is selected"""
         self.delete_btn.setEnabled(self.model_table.currentRow() >= 0)
 
+    def get_model_names(self):
+        models = []
+        for model in self.settings.get("models"):
+            models.append(model.get("name"))
+        return models 
+    
+    def change_current_model(self, name):
+        for model in self.settings.get("models"):
+            if model.get("name") == name:
+                self.settings["model_name"] = name 
+                self.settings["model_url"] = model.get("url")
+                self.settings["model_key"] = model.get("key")
+        self.save_models_to_file()
+    
+    def get_current_model(self):
+        return self.settings.get("model_name")
+
+    
+
     def load_models(self):
         """Load models from settings.json and populate table"""
         self.models = []
@@ -103,27 +122,26 @@ class SettingsTab(QWidget):
 
         try:
             with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.models = data.get("models", [])
+                self.settings = json.load(f)
         except (json.JSONDecodeError, Exception) as e:
             print(f"[ERROR] Failed to load settings.json: {e}")
             self.models = []
 
         # Populate table
-        for model in self.models:
+        for model in self.settings.get("models"):
             row = self.model_table.rowCount()
             self.model_table.insertRow(row)
 
-            name_item = QTableWidgetItem(model.get('modelName', 'Unknown'))
-            url_item = QTableWidgetItem(model.get('apiUrl', ''))
-            key_item = QTableWidgetItem(model.get('apiKey', ''))
+            name_item = QTableWidgetItem(model.get('name', 'Unknown'))
+            url_item = QTableWidgetItem(model.get('url', ''))
+            key_item = QTableWidgetItem(model.get('key', ''))
 
             # Optional: Mask API key in UI
             if key_item.text():
                 key_item.setText("•" * len(key_item.text()))
 
             # Store original API key in item data (so we can save it back later)
-            key_item.setData(Qt.ItemDataRole.UserRole, model.get('apiKey', ''))
+            key_item.setData(Qt.ItemDataRole.UserRole, model.get('key', ''))
 
             self.model_table.setItem(row, 0, name_item)
             self.model_table.setItem(row, 1, url_item)
@@ -132,11 +150,15 @@ class SettingsTab(QWidget):
     def create_default_settings(self):
         """Create default settings.json if not exists"""
         default_data = {
+            "model_name": "gemini-2.0-flash",
+            "model_url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            "model_key": "XXX",
+            "whisper_model_name": "small.en",
             "models": [
                 {
-                    "modelName": "Qwen (Default)",
-                    "apiUrl": "https://api.qwen.ai/v1/chat",
-                    "apiKey": "your_default_key_here"
+                    "name": "gemini-2.0-flash",
+                    "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                    "key": "XXX"
                 }
             ]
         }
@@ -177,8 +199,8 @@ class SettingsTab(QWidget):
                 QMessageBox.warning(dialog, "Input Error", "Model Name and API Endpoint are required!")
                 return
 
-            new_model = {"modelName": name, "apiUrl": url, "apiKey": key}
-            self.models.append(new_model)
+            new_model = {"name": name, "url": url, "key": key}
+            self.settings.get("models").append(new_model)
             self.save_models_to_file()
             self.load_models()  # Refresh table
             dialog.accept()
@@ -190,10 +212,9 @@ class SettingsTab(QWidget):
 
     def save_models_to_file(self):
         """Write models back to settings.json"""
-        data = {"models": self.models}
         try:
             with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
+                json.dump(self.settings, f, indent=2)
             print(f"[INFO] Saved {len(self.models)} models to {SETTINGS_FILE}")
         except Exception as e:
             QMessageBox.critical(self, "Save Error", f"Failed to save: {e}")
@@ -204,7 +225,7 @@ class SettingsTab(QWidget):
         if row < 0:
             return
 
-        model_name = self.models[row]['modelName']
+        model_name = self.settings.get("models")[row]['name']
         reply = QMessageBox.question(
             self,
             "Confirm Delete",
@@ -213,6 +234,6 @@ class SettingsTab(QWidget):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            del self.models[row]
+            del self.settings.get("models")[row]
             self.save_models_to_file()
             self.load_models()  # Refresh table

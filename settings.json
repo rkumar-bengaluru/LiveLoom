@@ -1,9 +1,14 @@
 {
+  "model_name": "llama-3.3-70b-versatile",
+  "model_url": "xxx",
+  "model_key": "XXX",
+  "whisper_model_name": "small.en",
   "models": [
     {
-      "modelName": "Qwen (Default)",
-      "apiUrl": "https://api.qwen.ai/v1/chat",
-      "apiKey": "your_default_key_here"
+      "name": "llama-3.3-70b-versatile",
+      "url": "xxx",
+      "key": "XXX",
+      "default": "true"
     }
   ]
 }

@@ -2,12 +2,13 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget, QLabel
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtCore import Qt
-
+from PyQt6.QtGui import QIcon
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("LLM Chat UI - Mock")
+        self.setWindowTitle("LiveLoom")
+        self.setWindowIcon(QIcon("icon/magic_icon.ico")) 
 
         with open("src/resources/style.qss", "r") as f:
             self.setStyleSheet(f.read())
@@ -37,16 +38,17 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
+         # Add Settings Tab (placeholder)
+        from .settings_tab import SettingsTab
+        settings = SettingsTab()
+
         # Add Chat Tab
         from .chat_tab import ChatTab
-        self.chat_tab = ChatTab()
+        self.chat_tab = ChatTab(settings)
         self.tabs.addTab(self.chat_tab, "Chat")
 
-        # Add Settings Tab (placeholder)
-        from .settings_tab import SettingsTab
-        settings_placeholder = SettingsTab()
-        # settings_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.tabs.addTab(settings_placeholder, "Settings")
+       # Add Settings Tab
+        self.tabs.addTab(settings, "Settings")
 
 
     def keyPressEvent(self, event):
