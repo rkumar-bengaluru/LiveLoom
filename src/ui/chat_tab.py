@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
     QTextEdit, QLineEdit, QComboBox, QLabel, QListWidget,
     QFrame
 )
+from PyQt6.QtGui import QTextCursor
 from PyQt6.QtCore import Qt
 from src.ui.widgets.llm_selector import LLMSelector
 from src.workers.llm_worker import LLMWorkerThread
@@ -23,7 +24,11 @@ class ChatTab(QWidget):
         self.logger = setup_daily_logger(name=LOGGER_NAME, log_dir=LOGGER_DIR)
         self.llm = LLMWrapper(model=self.settings.get_current_model(),
                               api_url=self.settings.get_current_url(),
-                              api_key=self.settings.get_current_key())
+                              api_key=self.settings.get_current_key(),
+                              answer_queue=self.answer_queue)
+        model = self.settings.get_current_model()
+        url = self.settings.get_current_url()
+        self.logger.info("initializing...%s with url %s", model, url)
         self.chatModule = ChatModule(self.llm,self)
         self.session = FlatChatSessionLogger()
         # add workers
@@ -123,9 +128,12 @@ class ChatTab(QWidget):
 
     # --- Dummy Functions (Replace Later) ---
 
-    def update_display(self, text):
-        self.chat_display.append(f"<b>{self.llm_selector.model_name}</b>: ")
-        self.chat_display.append(text)
+    def update_display(self, delta):
+        # self.chat_display.append(f"<b>{self.llm_selector.model_name}</b>: ")
+        self.chat_display.moveCursor(QTextCursor.MoveOperation.End)
+        self.chat_display.insertPlainText(delta)
+
+        # self.chat_display.append(text)
 
     def on_new_chat(self):
         self.logger.info("[UI Action] New Chat clicked")
@@ -142,14 +150,14 @@ class ChatTab(QWidget):
         model_name = self.llm_selector.model_name
 
         # Append to chat display
-        self.chat_display.append(f"<b>You</b> <i>(via {model_name})</i>: {user_text}")
+        self.chat_display.append(f"<b>You</b> <i>(via {model_name})</i>: {user_text}<br><br><b>{self.llm_selector.model_name}</b>:")
         # Using positional arguments
-        thread1 = threading.Thread(target=chat_async, args=(self.chatModule.chat_with_llm, user_text))
-        thread1.start()
+        # thread1 = threading.Thread(target=chat_async, args=(self.chatModule.chat_with_llm, user_text))
+        # thread1.start()
 
-        # self.chatModule.chat_with_llm(user_text)
+        self.chatModule.chat_with_llm(user_text)
         # self.chat_display.append(f"<b>{model_name}</b>: This is a mock response. Integrate your LLM logic here!")
-        # self.chat_display.append("")  # Blank line
+        self.chat_display.append("<b><b>")  # Blank line
 
         # Clear input
         self.input_box.clear()

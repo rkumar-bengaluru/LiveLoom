@@ -17,7 +17,11 @@ class ChatModule():
                 input_variables=["input"],
                 template="Respond to this user message: {input}"
         )
-        response = self.llm(prompt.format(input=input_text))
-        self.app.answer_queue.put(response)
+
+        if self.app.settings.is_steaming() == 1:
+            self.llm._call_stream(prompt.format(input=input_text))
+        else:
+            response = self.llm(prompt.format(input=input_text))
+            self.app.answer_queue.put(response)
     
 

@@ -16,7 +16,6 @@ class LLMWorkerThread(QThread):
             try:
                 response = self.app.answer_queue.get(timeout=0.5) 
                 self.update_signal.emit(response)
-                time.sleep(1)
             except queue.Empty:
                 response = None  # Or handle retry logic
        

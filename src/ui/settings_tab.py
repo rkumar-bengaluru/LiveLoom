@@ -114,7 +114,8 @@ class SettingsTab(QWidget):
 
         
         
-
+    def is_steaming(self):
+        return self.settings["enable_streaming"]
 
     def toggle_streaming(self, state):
         if self.checkbox.isChecked():
