@@ -7,11 +7,32 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from src.ui.widgets.llm_selector import LLMSelector
 from src.workers.llm_worker import LLMWorkerThread
+from src.utils.logger import setup_daily_logger
+from src.utils.constants import LOGGER_DIR, LOGGER_NAME
+from src.llm.wrapper import LLMWrapper
+from src.chat.chat import ChatModule
+from src.chat.session import FlatChatSessionLogger
+import queue 
+import threading 
 
 class ChatTab(QWidget):
     def __init__(self, settings):
         super().__init__()
         self.settings = settings 
+        self.answer_queue = queue.Queue()
+        self.logger = setup_daily_logger(name=LOGGER_NAME, log_dir=LOGGER_DIR)
+        self.llm = LLMWrapper(model=self.settings.get_current_model(),
+                              api_url=self.settings.get_current_url(),
+                              api_key=self.settings.get_current_key())
+        self.chatModule = ChatModule(self.llm,self)
+        self.session = FlatChatSessionLogger()
+        # add workers
+        # Start worker thread
+        self.worker = LLMWorkerThread()
+        self.worker.set_app(self)
+        self.worker.update_signal.connect(self.update_display)  # Connect signal to slot
+        self.worker.start()
+
         self.init_ui()
 
     def init_ui(self):
@@ -98,20 +119,19 @@ class ChatTab(QWidget):
         main_layout.addWidget(chat_area, 1)  # Take remaining space
 
         
-        # add workers
-         # Start worker thread
-        self.worker = LLMWorkerThread()
-        self.worker.update_signal.connect(self.update_display)  # Connect signal to slot
-        self.worker.start()
+        
 
     # --- Dummy Functions (Replace Later) ---
 
     def update_display(self, text):
-        self.chat_display.append(f"<b>{self.llm_selector.model_name}</b>: {text}")
+        self.chat_display.append(f"<b>{self.llm_selector.model_name}</b>: ")
+        self.chat_display.append(text)
 
     def on_new_chat(self):
-        print("[UI Action] New Chat clicked")
+        self.logger.info("[UI Action] New Chat clicked")
         # Clear chat_display, reset state, etc.
+
+    
 
     def on_send_chat(self):
         user_text = self.input_box.text().strip()
@@ -119,12 +139,20 @@ class ChatTab(QWidget):
             return
 
         # Get selected model
-        model_name = self.model_picker.currentText()
+        model_name = self.llm_selector.model_name
 
         # Append to chat display
         self.chat_display.append(f"<b>You</b> <i>(via {model_name})</i>: {user_text}")
-        self.chat_display.append(f"<b>{model_name}</b>: This is a mock response. Integrate your LLM logic here!")
-        self.chat_display.append("")  # Blank line
+        # Using positional arguments
+        thread1 = threading.Thread(target=chat_async, args=(self.chatModule.chat_with_llm, user_text))
+        thread1.start()
+
+        # self.chatModule.chat_with_llm(user_text)
+        # self.chat_display.append(f"<b>{model_name}</b>: This is a mock response. Integrate your LLM logic here!")
+        # self.chat_display.append("")  # Blank line
 
         # Clear input
         self.input_box.clear()
+
+def chat_async(chat, input_text):
+    chat(input_text)

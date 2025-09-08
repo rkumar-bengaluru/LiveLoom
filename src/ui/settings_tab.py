@@ -7,15 +7,16 @@ from PyQt6.QtWidgets import (
     QMessageBox, QHeaderView
 )
 from PyQt6.QtCore import Qt
-
-SETTINGS_FILE = "settings.json"
+from src.utils.constants import LOGGER_DIR, LOGGER_NAME, SETTINGS_FILE
+from src.utils.logger import setup_daily_logger
 
 class SettingsTab(QWidget):
     def __init__(self):
         super().__init__()
-        self.models = []
+        self.logger = setup_daily_logger(name=LOGGER_NAME, log_dir=LOGGER_DIR)
         self.init_ui()
         self.load_models()
+        
 
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -108,7 +109,12 @@ class SettingsTab(QWidget):
     
     def get_current_model(self):
         return self.settings.get("model_name")
-
+    
+    def get_current_key(self):
+        return self.settings.get("model_key")
+    
+    def get_current_url(self):
+        return self.settings.get("model_url")
     
 
     def load_models(self):
@@ -117,14 +123,14 @@ class SettingsTab(QWidget):
         self.model_table.setRowCount(0)  # Clear table
 
         if not os.path.exists(SETTINGS_FILE):
-            self.create_default_settings()
+            self.settings = self.create_default_settings()
             return
 
         try:
             with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
                 self.settings = json.load(f)
         except (json.JSONDecodeError, Exception) as e:
-            print(f"[ERROR] Failed to load settings.json: {e}")
+            self.logger.error(f"[ERROR] Failed to load settings.json: {e}")
             self.models = []
 
         # Populate table
@@ -164,7 +170,8 @@ class SettingsTab(QWidget):
         }
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(default_data, f, indent=2)
-        print(f"[INFO] Created default {SETTINGS_FILE}")
+        self.logger.info(f"[INFO] Created default {SETTINGS_FILE}")
+        return default_data
 
     def open_add_model_dialog(self):
         """Open dialog to add new model"""
@@ -215,7 +222,7 @@ class SettingsTab(QWidget):
         try:
             with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2)
-            print(f"[INFO] Saved {len(self.models)} models to {SETTINGS_FILE}")
+            self.logger.info(f"[INFO] Saved {len(self.models)} models to {SETTINGS_FILE}")
         except Exception as e:
             QMessageBox.critical(self, "Save Error", f"Failed to save: {e}")
 
