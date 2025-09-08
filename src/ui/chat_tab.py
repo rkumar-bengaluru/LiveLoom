@@ -14,6 +14,7 @@ from src.llm.wrapper import LLMWrapper
 from src.chat.chat import ChatModule
 from src.chat.session import FlatChatSessionLogger
 import queue 
+import os 
 import threading 
 
 class ChatTab(QWidget):
@@ -29,8 +30,9 @@ class ChatTab(QWidget):
         model = self.settings.get_current_model()
         url = self.settings.get_current_url()
         self.logger.info("initializing...%s with url %s", model, url)
-        self.chatModule = ChatModule(self.llm,self)
         self.session = FlatChatSessionLogger()
+        self.chatModule = ChatModule(self.llm, self)
+        
         # add workers
         # Start worker thread
         self.worker = LLMWorkerThread()
@@ -66,14 +68,20 @@ class ChatTab(QWidget):
 
         # Recent Sessions List
         self.recent_list = QListWidget()
-        sample_sessions = [
-            "Chat about Python PyQt6",
-            "Explain quantum computing",
-            "Write a poem about AI",
-            "Debug my React code",
-            "Compare LLMs: Gemini vs Llama"
-        ]
-        self.recent_list.addItems(sample_sessions)
+        self.recent_sessions = self.session.get_recent_sessions()
+        self.recent_list.setStyleSheet("""
+            QListWidget::item:selected {
+                background-color: #d0eaff;
+                color: black;
+            }
+            """)
+        self.sample_sessions = []
+        for session in self.recent_sessions:
+            self.sample_sessions.append(os.path.basename(session))
+        # Connect the click signal
+        self.recent_list.itemClicked.connect(self.on_item_clicked)
+       
+        self.recent_list.addItems(self.sample_sessions)
         self.recent_list.setStyleSheet("border: 1px solid #ddd; border-radius: 5px;")
         sidebar_layout.addWidget(self.recent_list)
 
@@ -128,16 +136,47 @@ class ChatTab(QWidget):
 
     # --- Dummy Functions (Replace Later) ---
 
+    def refresh_list_widget(self,list_widget: QListWidget, items: list[str]):
+        list_widget.clear()               # Remove all existing items
+        list_widget.addItems(items)       # Add new items
+
     def update_display(self, delta):
         # self.chat_display.append(f"<b>{self.llm_selector.model_name}</b>: ")
-        self.chat_display.moveCursor(QTextCursor.MoveOperation.End)
-        self.chat_display.insertPlainText(delta)
+        if delta == "data: [DONE]":
+            self.chat_display.append(f"<b>{self.llm_selector.model_name} : Done...</b><br><br> ")
+        else:
+            self.chat_display.moveCursor(QTextCursor.MoveOperation.End)
+            self.chat_display.insertPlainText(delta)
 
         # self.chat_display.append(text)
 
+    def on_item_clicked(self, item):
+        for session in self.recent_sessions:
+            if item.text() in session:
+                try:
+                    with open(session, "r", encoding="utf-8") as f:
+                        content = f.read()
+                        self.chat_display.setPlainText(content)
+                except Exception as e:
+                    self.chat_display.setPlainText(f"Error loading file:\n{e}")
+        
+
     def on_new_chat(self):
         self.logger.info("[UI Action] New Chat clicked")
-        # Clear chat_display, reset state, etc.
+        new_session = self.session._create_session_file()
+        self.recent_sessions = self.session.get_recent_sessions()
+        self.sample_sessions = []
+        
+        for session in self.recent_sessions:
+            self.sample_sessions.append(os.path.basename(session))
+        self.refresh_list_widget(self.recent_list, self.sample_sessions)
+        # Refresh Diplay with new file
+        try:
+            with open(new_session, "r", encoding="utf-8") as f:
+                content = f.read()
+                self.chat_display.setPlainText(content)
+        except Exception as e:
+            self.chat_display.setPlainText(f"Error loading file:\n{e}")
 
     
 
@@ -152,12 +191,8 @@ class ChatTab(QWidget):
         # Append to chat display
         self.chat_display.append(f"<b>You</b> <i>(via {model_name})</i>: {user_text}<br><br><b>{self.llm_selector.model_name}</b>:")
         # Using positional arguments
-        # thread1 = threading.Thread(target=chat_async, args=(self.chatModule.chat_with_llm, user_text))
-        # thread1.start()
-
-        self.chatModule.chat_with_llm(user_text)
-        # self.chat_display.append(f"<b>{model_name}</b>: This is a mock response. Integrate your LLM logic here!")
-        self.chat_display.append("<b><b>")  # Blank line
+        thread1 = threading.Thread(target=chat_async, args=(self.chatModule.chat_with_llm, user_text))
+        thread1.start()
 
         # Clear input
         self.input_box.clear()

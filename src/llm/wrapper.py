@@ -70,6 +70,7 @@ class LLMWrapper(LLM):
                     if not line:                      # skip keep-alive
                         continue
                     if line == "data: [DONE]":        # upstream done
+                        self.answer_queue.put("data: [DONE]")
                         break
                     if line.startswith("data: "):
                         chunk = json.loads(line[6:])  # remove "data: " prefix

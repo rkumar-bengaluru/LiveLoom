@@ -16,20 +16,21 @@ class FlatChatSessionLogger:
         self.logger = setup_daily_logger(name=LOGGER_NAME, log_dir=LOGGER_DIR)
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        self.session_file = self._create_session_file()
 
     def _create_session_file(self) -> Path:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         file_path = self.base_dir / f"{timestamp}.txt"
         file_path.touch(exist_ok=False)
         self.logger.info(f"creating session {file_path}")
+        self.session_file = file_path
         return file_path
 
-    def log_interaction(self, question: str, answer: str):
+    def log_interaction(self, question: str, answer: str, exec_time: float, model_name: str):
         self.logger.info("logging new interaction")
         with self.session_file.open("a", encoding="utf-8") as f:
-            f.write(f"Q: {question}\n")
-            f.write(f"A: {answer}\n\n")
+            f.write(f"Question {model_name} : {question}\n")
+            f.write(f"Answer {model_name} : {answer}\n\n")
+            f.write(f"ExecTime {model_name} : {str(exec_time)}\n\n")
 
     @staticmethod
     def get_recent_sessions(base_dir=SESSION_DIR, count=7) -> list[str]:
