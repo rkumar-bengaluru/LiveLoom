@@ -1,0 +1,9 @@
+{
+  "models": [
+    {
+      "modelName": "Qwen (Default)",
+      "apiUrl": "https://api.qwen.ai/v1/chat",
+      "apiKey": "your_default_key_here"
+    }
+  ]
+}
