@@ -199,6 +199,7 @@ class SettingsTab(QWidget):
             "model_name": "gemini-2.0-flash",
             "model_url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
             "model_key": "XXX",
+            "enable_streaming": 1,
             "whisper_model_name": "small.en",
             "models": [
                 {
