@@ -2,13 +2,21 @@ import sys
 import time
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 from PyQt6.QtCore import QThread, pyqtSignal
+import queue 
 
 class LLMWorkerThread(QThread):
-    # Define a signal to send data to main thread
+
     update_signal = pyqtSignal(str)
 
+    def set_app(self, app):
+        self.app = app 
+
     def run(self):
-        for i in range(100):
-            time.sleep(1)
-            # ✅ SAFE: Emit signal → slot in main thread will update UI
-            self.update_signal.emit(f"Step {i + 1} completed")
+        while True:
+            try:
+                response = self.app.answer_queue.get(timeout=0.5) 
+                self.update_signal.emit(response)
+            except queue.Empty:
+                response = None  # Or handle retry logic
+       
+        

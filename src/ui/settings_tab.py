@@ -4,23 +4,41 @@ import os
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
     QPushButton, QDialog, QLineEdit, QFormLayout, QDialogButtonBox,
-    QMessageBox, QHeaderView
+    QMessageBox, QHeaderView, QCheckBox
 )
 from PyQt6.QtCore import Qt
-
-SETTINGS_FILE = "settings.json"
+from src.utils.constants import LOGGER_DIR, LOGGER_NAME, SETTINGS_FILE
+from src.utils.logger import setup_daily_logger
 
 class SettingsTab(QWidget):
     def __init__(self):
         super().__init__()
-        self.models = []
+        self.logger = setup_daily_logger(name=LOGGER_NAME, log_dir=LOGGER_DIR)
         self.init_ui()
         self.load_models()
+        self.init_steaming()
+        
+
+    def init_steaming(self):
+        stream_section = QWidget()
+        stream_layout = QVBoxLayout(stream_section)
+        stream_layout.setContentsMargins(0, 0, 0, 0)
+        stream_layout.setSpacing(10)
+        self.checkbox = QCheckBox("Enable Streaming")
+        streaming_enabled = self.settings.get("enable_streaming")
+        self.checkbox.setChecked(streaming_enabled)
+        
+        # Connect checkbox state change
+        self.checkbox.stateChanged.connect(self.toggle_streaming)
+
+        stream_layout.addWidget(self.checkbox)
+        self.layout.addWidget(stream_section, 1)
+        
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(20, 20, 20, 20)
+        self.layout.setSpacing(15)
 
         # === TOP SECTION: Saved Models Table (50%) ===
         top_section = QWidget()
@@ -57,13 +75,15 @@ class SettingsTab(QWidget):
 
         top_layout.addWidget(self.model_table, 1)
 
-        layout.addWidget(top_section, 1)  # 50% height
+
+        self.layout.addWidget(top_section, 3)  # 50% height
 
         # === BOTTOM SECTION: Buttons (50%) ===
         bottom_section = QWidget()
         bottom_layout = QVBoxLayout(bottom_section)
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         bottom_layout.setSpacing(10)
+
 
         # Button Row
         button_row = QHBoxLayout()
@@ -83,10 +103,31 @@ class SettingsTab(QWidget):
         bottom_layout.addLayout(button_row)
         bottom_layout.addStretch()  # Push buttons to top of bottom section
 
-        layout.addWidget(bottom_section, 1)  # 50% height
+        self.layout.addWidget(bottom_section, 1)  # 50% height
 
         # Connect selection change to enable/disable delete button
         self.model_table.itemSelectionChanged.connect(self.on_selection_changed)
+
+        # === BOTTOM SECTION: Buttons (50%) ===
+        
+
+
+        
+        
+    def is_steaming(self):
+        return self.settings["enable_streaming"]
+
+    def toggle_streaming(self, state):
+        if self.checkbox.isChecked():
+            self.settings["enable_streaming"] = 1
+            # self.label.setText("Streaming Mode: ON")
+            # Trigger streaming logic here
+        else:
+            self.settings["enable_streaming"] = 0
+            # self.label.setText("Streaming Mode: OFF")
+            # Trigger non-streaming logic here
+        self.save_models_to_file()
+
 
     def on_selection_changed(self):
         """Enable Delete button only if a row is selected"""
@@ -108,7 +149,12 @@ class SettingsTab(QWidget):
     
     def get_current_model(self):
         return self.settings.get("model_name")
-
+    
+    def get_current_key(self):
+        return self.settings.get("model_key")
+    
+    def get_current_url(self):
+        return self.settings.get("model_url")
     
 
     def load_models(self):
@@ -117,16 +163,16 @@ class SettingsTab(QWidget):
         self.model_table.setRowCount(0)  # Clear table
 
         if not os.path.exists(SETTINGS_FILE):
-            self.create_default_settings()
+            self.settings = self.create_default_settings()
             return
 
         try:
             with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
                 self.settings = json.load(f)
         except (json.JSONDecodeError, Exception) as e:
-            print(f"[ERROR] Failed to load settings.json: {e}")
+            self.logger.error(f"[ERROR] Failed to load settings.json: {e}")
             self.models = []
-
+        
         # Populate table
         for model in self.settings.get("models"):
             row = self.model_table.rowCount()
@@ -164,7 +210,8 @@ class SettingsTab(QWidget):
         }
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(default_data, f, indent=2)
-        print(f"[INFO] Created default {SETTINGS_FILE}")
+        self.logger.info(f"[INFO] Created default {SETTINGS_FILE}")
+        return default_data
 
     def open_add_model_dialog(self):
         """Open dialog to add new model"""
@@ -215,7 +262,7 @@ class SettingsTab(QWidget):
         try:
             with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2)
-            print(f"[INFO] Saved {len(self.models)} models to {SETTINGS_FILE}")
+            self.logger.info(f"[INFO] Saved {len(self.models)} models to {SETTINGS_FILE}")
         except Exception as e:
             QMessageBox.critical(self, "Save Error", f"Failed to save: {e}")
 

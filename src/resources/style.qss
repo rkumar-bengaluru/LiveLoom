@@ -3,10 +3,6 @@ QWidget {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-QListWidget::item:selected {
-    background-color: #e6f7ff;
-    border-left: 3px solid #1890ff;
-}
 
 QTextEdit, QLineEdit {
     background-color: white;
