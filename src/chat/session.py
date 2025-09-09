@@ -16,6 +16,7 @@ class FlatChatSessionLogger:
         self.logger = setup_daily_logger(name=LOGGER_NAME, log_dir=LOGGER_DIR)
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.session_file = None 
 
     def _create_session_file(self) -> Path:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

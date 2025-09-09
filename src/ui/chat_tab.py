@@ -184,6 +184,9 @@ class ChatTab(QWidget):
         user_text = self.input_box.text().strip()
         if not user_text:
             return
+        
+        if self.session.session_file is None:
+            self.on_new_chat()
 
         # Get selected model
         model_name = self.llm_selector.model_name
